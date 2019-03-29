@@ -26,6 +26,32 @@ def taxi_data(data_file, out_file):
         for g, m in flows.items():
             sheet.writerow([g[0], g[1], m])
 
+def grid_dis(i, j, colnum):
+    x0 = int(i) % colnum
+    y0 = int(i) // colnum
+    x1 = int(j) % colnum
+    y1 = int(j) // colnum
+    return np.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2)
+
+
+def gravity_model(flows, attraction, colnum):
+    Y = []
+    X = []
+    for k in flows:
+        if k[2]:
+            #print(k)
+            Y.append(np.log(attraction[k[0]]*attraction[k[1]]/k[2]))
+            X.append(np.log(grid_dis(k[0], k[1], colnum)))
+
+    p = np.polyfit(X, Y, 1)
+    beta = p[0]
+    K = np.e**(-p[1])
+    '''
+    p1 = plt.scatter(X, Y, marker='.', color='green', s=10)
+    plt.show()
+    '''
+    return beta, K
+
 
 if __name__ == '__main__':
     pass
