@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-：
 
-import numpy as np
 import csv
+import numpy as np
+import collections
+import matplotlib.pyplot as plt
 
+def taxi_data(data_file, flow_file, feature_file, col_num, threshold=0):
+    features = {}  # [row, col, attract, pull]
 
-# 出租车数据处理
-def taxi_data(data_file, out_file):
     flows = {}
     with open(data_file, 'r') as f:
         f.readline()
@@ -20,38 +22,39 @@ def taxi_data(data_file, out_file):
                 flows[k] += 1
             line = f.readline().strip()
 
-    with open(out_file, 'w', newline='') as rf:
+    with open(flow_file, 'w', newline='') as rf:
         sheet = csv.writer(rf, delimiter='\t')
         sheet.writerow(['ogid', 'dgid', 'm'])
         for g, m in flows.items():
-            sheet.writerow([g[0], g[1], m])
+            if m >= threshold:
+                sheet.writerow([g[0], g[1], m])
+                if g[0] not in features:
+                    features[g[0]] = [g[0], int(g[0]) // col_num, int(g[0]) % col_num, 0, 0]
+                if g[1] not in features:
+                    features[g[1]] = [g[1], int(g[1]) // col_num, int(g[1]) % col_num, 0, 0]
+                features[g[0]][4] += m  # pick-up:  pull
+                features[g[1]][3] += m  # drop-off: attract
 
-def grid_dis(i, j, colnum):
-    x0 = int(i) % colnum
-    y0 = int(i) // colnum
-    x1 = int(j) % colnum
-    y1 = int(j) // colnum
-    return np.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2)
-
-
-def gravity_model(flows, attraction, colnum):
-    Y = []
-    X = []
-    for k in flows:
-        if k[2]:
-            #print(k)
-            Y.append(np.log(attraction[k[0]]*attraction[k[1]]/k[2]))
-            X.append(np.log(grid_dis(k[0], k[1], colnum)))
-
-    p = np.polyfit(X, Y, 1)
-    beta = p[0]
-    K = np.e**(-p[1])
-    '''
-    p1 = plt.scatter(X, Y, marker='.', color='green', s=10)
-    plt.show()
-    '''
-    return beta, K
+    with open(feature_file, 'w', newline='') as rf:
+        sheet = csv.writer(rf, delimiter='\t')
+        sheet.writerow(['gid', 'row', 'col', 'attract', 'pull'])
+        for v in features.values():
+            sheet.writerow(v)
 
 
 if __name__ == '__main__':
-    pass
+    col_num = 40#30#15#59
+    taxi_data('data/sj_051317_750m.txt', 'data/flow_051317_750m.txt', 'data/feature_051317_750m.txt', col_num, threshold=25)
+    '''
+    data = np.loadtxt('data/flow_051317_500m.txt', skiprows=1, delimiter='\t', dtype=np.uint16)
+    r = collections.Counter(data[:, 2])
+    X = []
+    Y = []
+    for x, y in r.items():
+        X.append(x)
+        Y.append(y)
+
+    plt.figure()
+    plt.bar(X, Y)
+    plt.show()
+    '''
